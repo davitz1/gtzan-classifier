@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Genre Classifier</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            text-align: center;
+            padding: 40px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            transition: border-color 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #3498db;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .custom-file-upload {
+            display: inline-block;
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: #3498db;
+            color: white;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .custom-file-upload:hover {
+            background-color: #2980b9;
+        }
+
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+
+        button#analyze-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        button#analyze-btn:hover {
+            background-color: #219150;
+        }
+
+        button#analyze-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .result-card {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid #27ae60;
+        }
+
+        .prediction-main {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .confidence {
+            font-size: 1.2em;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+
+        .bars {
+            margin-top: 20px;
+        }
+
+        .bar-container {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .bar-label {
+            width: 100px;
+            font-weight: bold;
+        }
+
+        .bar-wrapper {
+            flex-grow: 1;
+            background-color: #ecf0f1;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 10px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 1s ease-out;
+        }
+
+        .bar-value {
+            width: 50px;
+            text-align: right;
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        #audio-player-container {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #audio-player {
+            width: 100%;
+            max-width: 500px;
+            margin: 10px auto;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Music Genre Classifier</h1>
+
+        <div class="upload-section">
+            <label for="file-input" class="custom-file-upload">
+                Choose Audio File
+            </label>
+            <input id="file-input" type="file" accept="audio/*" />
+            <div id="file-name">No file chosen</div>
+        </div>
+
+        <div id="audio-player-container">
+            <audio id="audio-player" controls>
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+
+        <button id="analyze-btn" disabled>Analyze Genre</button>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Analyzing audio features...</p>
+        </div>
+
+        <div id="error-msg" class="error"></div>
+
+        <div id="results">
+            <div class="result-card">
+                <div class="prediction-main" id="prediction-genre">ROCK</div>
+                <div class="confidence" id="prediction-confidence">Confidence: 95.2%</div>
+
+                <h3>All Probabilities</h3>
+                <div class="bars" id="probability-bars">
+                    <!-- Bars will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const loadingDiv = document.getElementById('loading');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('error-msg');
+        const genreDisplay = document.getElementById('prediction-genre');
+        const confidenceDisplay = document.getElementById('prediction-confidence');
+        const barsContainer = document.getElementById('probability-bars');
+        const audioPlayer = document.getElementById('audio-player');
+        const audioPlayerContainer = document.getElementById('audio-player-container');
+
+        fileInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                const file = this.files[0];
+                fileNameDisplay.textContent = file.name;
+                analyzeBtn.disabled = false;
+                resultsDiv.style.display = 'none';
+                errorDiv.textContent = '';
+
+                // Create URL for audio file and display player
+                const audioUrl = URL.createObjectURL(file);
+                audioPlayer.src = audioUrl;
+                audioPlayerContainer.style.display = 'block';
+            } else {
+                fileNameDisplay.textContent = 'No file chosen';
+                analyzeBtn.disabled = true;
+                audioPlayerContainer.style.display = 'none';
+                audioPlayer.src = '';
+            }
+        });
+
+        analyzeBtn.addEventListener('click', async function () {
+            if (!fileInput.files || fileInput.files.length === 0) return;
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // UI updates
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            analyzeBtn.disabled = true;
+            errorDiv.textContent = '';
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Analysis failed');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+
+            } catch (error) {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Error: ' + error.message;
+            } finally {
+                loadingDiv.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function displayResults(data) {
+            genreDisplay.textContent = data.genre.toUpperCase();
+            confidenceDisplay.textContent = `Confidence: ${(data.confidence * 100).toFixed(1)}%`;
+
+            // Sort probabilities
+            const sortedProbs = Object.entries(data.probabilities)
+                .sort(([, a], [, b]) => b - a);
+
+            barsContainer.innerHTML = '';
+
+            sortedProbs.forEach(([genre, prob]) => {
+                const percentage = (prob * 100).toFixed(1);
+
+                const barContainer = document.createElement('div');
+                barContainer.className = 'bar-container';
+
+                barContainer.innerHTML = `
+                    <div class="bar-label">${genre}</div>
+                    <div class="bar-wrapper">
+                        <div class="bar-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="bar-value">${percentage}%</div>
+                `;
+
+                barsContainer.appendChild(barContainer);
+            });
+
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>
