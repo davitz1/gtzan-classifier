@@ -223,7 +223,7 @@ print(f"Confidence: {result['confidence']*100:.2f}%")
 Start the Server
 
 ```bash
-uvicorn src.app.main:app --reload
+python src/app/main.py
 ```
 Access: Open http://localhost:8000 in your browser
 
