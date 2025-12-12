@@ -1,17 +1,110 @@
 
 # Music Genre Classifier
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0-red)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.95-green)
+![Librosa](https://img.shields.io/badge/Librosa-0.10-orange)
 
-CNN-based music genre classification using MFCC features on the GTZAN dataset.
+A Convolutional Neural Network (CNN) for music genre classification, utilizing MFCC feature extraction trained on the GTZAN dataset.
+
+## Introduction
+
+The CNN model was trained on the GTZAN dataset, a legacy collection comprising 1,000 audio tracks sampled at 22,050 Hz. The data is organized into 10 balanced classes of 100 tracks each:
+
+GTZAN is not a gold-standard benchmark, but it is an accessible training resource for the classifier. It is important to note that the dataset has inherent limitations like low fidelity, potential artist repetition, and noise, which constrains the model's ability to generalize to real-world audio. However, it remains highly effective for demonstrating the CNN's ability to extract hierarchical features and distinguish timbral textures within a specific distribution.
+
+### Dataset Overview
+
+The dataset consists of 10 genres:
+- Blues
+- Classical
+- Country
+- Disco
+- HipHop
+- Jazz
+- Metal
+- Pop
+- Reggae
+- Rock
+All audio files are 30-second WAV files sampled at 22,050 Hz.
+
+### Data Augmentation via Segmentation
+To increase the amount of training samples and improve model generalization, each 30-second track is split into 10 equal segments of 3 seconds. This produces:
+
+- **1 original track → 10 training samples**
+- **1,000 tracks → 10,000 MFCC samples (before splitting into train/val/test)**
+
+Each 3-second segment is converted into Mel-Frequency Cepstral Coefficients (MFCCs) with a shape of **(T, 13)**, where *T* is the number of time frames for that 3s window and `13` is the number of MFCC coefficients.
+
+After segmentation, the dataset is split approximately **60/20/20** into:
+- **Train:** 5,991 samples  
+- **Validation:** 1,997 samples  
+- **Test:** 1,998 samples  
+
+This approach exposes the model to multiple localized snapshots of each track, facilitating the learning of robust patterns in rhythm and timbre.
 
 ## Table of Contents
+- [How It Works](#how-it-works)
+- [Results](#results)
 - [Setup](#setup)
 - [Dataset Download](#dataset-download)
 - [Feature Extraction](#feature-extraction)
 - [Training](#training)
 - [Inference](#inference)
 - [Web Application](#web-application)
-- [How It Works](#how-it-works)
 
+---
+
+## How It Works
+### 1. **Feature Extraction (MFCC)**
+
+MFCC (Mel-Frequency Cepstral Coefficients) captures the timbral characteristics of audio.
+- Input: 30-second audio clip
+- Process: Split into 10 segments (3s each) -> Extract 13 MFCCs
+- Output: (10, 130, 13) matrix 
+
+### 2. **Model Architecture (CNN)**
+
+A Convolutional Neural Network processes the MFCC image-like data:
+
+- **Convolutional Layers (x3):** Extract spatial features from the MFCC spectrogram.
+- **Flatten Layer**: Converts 2D feature maps to 1D vectors.
+- **Fully Connected Layers (x2)**: Dense layers for classification logic.
+- **Softmax Output**: Returns a probability distribution across the 10 genres.
+
+### 3. **Inference Logic**
+
+The model expects 30-second inputs to match its training distribution. When a user uploads a file, the system applies the following logic:
+
+- **For Short Audio (< 30 seconds):** Padded with silence to reach 30 seconds.
+
+- **For Long Audio (> 30 seconds):** Truncated to the first 30 seconds.
+
+- **Processing**: The resulting 30s clip is split into segments, and predictions are averaged across segments to determine the final genre.
+
+**Note:** We analyze the first 30 seconds as most tracks establish their genre characteristics (instrumentation, tempo, rhythm) in the intro.
+
+---
+## Results 
+
+- **Test Accuracy:** 77.33%
+- **Confusion Matrix:**
+
+<p align="center">
+  <img src="outputs/mfcc_cnn/plots/confusion_matrix.png" width="800">
+</p>
+
+- **Per Class Accuracy:**
+
+<p align="center">
+  <img src="outputs/mfcc_cnn/plots/per_class_accuracy.png" width="800">
+</p>
+
+- **Training curves:** 
+  
+<p align="center">
+  <img src="outputs/mfcc_cnn/plots/training_curves.png" width="800">
+</p>
 ---
 
 ## Setup
@@ -37,56 +130,39 @@ pip install -r requirements.txt
 ```
 ---
 ## Dataset Download
-GTZAN can be download through Kaggle API or manually.
+GTZAN can be downloaded through Kaggle API or manually.
 
 ### Manual Download
 1. Visit https://www.kaggle.com/datasets/andradaolteanu/gtzan-dataset-music-genre-classification
 2. Download and extract the zip file
-3. Move the `genres_original` folder to your project so it looks like `gtzan-classifier/data/gtzan/genres_original/`
+3. Move the `genres_original` folder to: `gtzan-classifier/data/gtzan/genres_original/`
 
 ### API Download
-**API Option Requirements:**
-1. Kaggle account 
-2. API credentials
+**API Option Requirements:** Kaggle account and API credentials.
 
-**SETUP Kaggle API:**
-1. Go to https://www.kaggle.com/settings/account
-2. Click 'Create New API Token'
-3. Create a `kaggle.json` file manually: 
-**Windows**:
-```bash
-mkdir %USERPROFILE%\.kaggle
-notepad %USERPROFILE%\.kaggle\kaggle.json
-```
-**Linux/Mac**:
-```bash
-mkdir -p ~/.kaggle
-nano ~/.kaggle/kaggle.json
-```
-4. Paste this content (replace with your credentials):
+**Configure Kaggle API:**
+1. Go to https://www.kaggle.com/settings/account  → Account → 'Create New API Token'.
+2. Create a `kaggle.json` in: 
+**Windows**:`%USERPROFILE%\.kaggle\kaggle.json`
+**Linux/Mac**: `~/.kaggle/kaggle.json` (Run `chmod 600 ~/.kaggle/kaggle.json`)
+3. Paste this content (replace with your credentials):
 ```json
 { 
  "username": "your_kaggle_username",
     "key": "your_api_key_here"
 }
 ```
-5. Set correct permissions (Linux/Mac only):
-```bash
-chmod 600 ~/.kaggle/kaggle.json
-```
+
 **Download the dataset:**
 ```bash
-#install kaggle API
+#INSTALL KAGGLE API
 pip install kaggle
 
-#run the download script
+#RUN THE DOWNLOAD SCRIPT 
 python download_dataset.py
 ```
 This will:
-- Download 1.2 GB of audio files
-- Extract to `genres_original` 
-- Organize into 10 genre folders
-- Verify the structure
+- This script downloads the 1.2 GB dataset, extracts it, and verifies the directory structure.
 ---
 ## Feature Extraction
 Extract MFCC features from the audio files:
@@ -95,7 +171,7 @@ python src/data_processing/feature_extractor.py
 ```
 This will:
 - Load each 30-second audio file
-- Split into 5 segments of 6 seconds each
+- Split into 10 F of 3 seconds each
 - Extract 13 MFCC coefficients per segment
 - Saves to `mfcc_data.npz`
 ---
@@ -138,6 +214,10 @@ print(f"Confidence: {result['confidence']*100:.2f}%")
 ```
 ---
 ## Web Application
+**Interface Preview**
+<p align="center">
+  <img src="outputs/interface.png" width="800">
+</p>
 Start the Server
 ```bash
 uvicorn src.app.main:app --reload
@@ -145,48 +225,18 @@ uvicorn src.app.main:app --reload
 Access: Open http://localhost:8000 in your browser
 
 Features:
-- Upload audio file: Drag & drop or click to select
+- Drag & drop or click to select interface
 - Supported formats: .wav (recommended), .mp3, .flac, .ogg, .m4a
-- Real-time prediction: Results appear instantly
+- Real-time prediction
 ---
-## How It Works
-### 1. **Feature Extraction (MFCC)**
 
-MFCC (Mel-Frequency Cepstral Coefficients) captures the timbral characteristics of audio.
--Input: 30-second audio clip
--Process: Split into 5 segments (6s each) -> Extract 13 MFCCs
--Output: (5, 130, 13) matrix
+## Future Improvements
+To move beyond the limitations of the GTZAN dataset and simple CNN architecture, future work could include:
 
-### 2. **Model Architecture (CNN)**
-
-A Convolutional Neural Network processes the MFCC image-like data:
-
- - Three Convolutional Layers (extract features)
-
-- Flatten Layer
-- 2 Fully Connected Layers (classification)
-- Softmax Output (10 genres)
-
-### 3. **Inference Logic**
-
-The model was trained on 30-second audio clips. When you upload a file:
-
-**For Short Audio (< 30 seconds):**
-
-Padded with silence to reach 30 seconds.
-
-**For Long Audio (> 30 seconds):**
-
-Truncated to the first 30 seconds.
-Only the intro/beginning is analyzed.
-The 30s clip is split into 5 segments, predictions are averaged.
-
-**Why?**
-
-The model was trained only on 30-second clips from GTZAN.
-Most songs establish their genre in the first 30 seconds (intro, instrumentation, rhythm).
-
----
+- **Dataset Scaling:** Training on the **FMA (Free Music Archive)** dataset to improve generalization to real-world audio.
+- **Architecture:** Implementing **CRNNs (Convolutional Recurrent Neural Networks)** to better capture temporal dependencies in longer audio sequences.
+- **Data Augmentation:** Adding noise injection, pitch shifting, and time stretching to make the model robust against low-quality inputs.
+- **Transfer Learning:** Fine-tuning pre-trained audio models (like VGGish or OpenL3) instead of training from scratch.
 
 ## Citation
 
