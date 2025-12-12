@@ -5,11 +5,11 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.95-green)
 ![Librosa](https://img.shields.io/badge/Librosa-0.10-orange)
 
-A Convolutional Neural Network (CNN) for music genre classification, utilizing MFCC feature extraction trained on the GTZAN dataset.
+A Convolutional Neural Network (CNN) for music genre classification, utilizing MFCC features extracted from the GTZAN dataset.
 
 ## Introduction
 
-The CNN model was trained on the GTZAN dataset, a legacy collection comprising 1,000 audio tracks sampled at 22,050 Hz. The data is organized into 10 balanced classes of 100 tracks each:
+The CNN model was trained on the GTZAN dataset, a legacy collection comprising 1,000 audio tracks sampled at 22,050 Hz. The data is organized into 10 balanced classes of 100 tracks each.
 
 GTZAN is not a gold-standard benchmark, but it is an accessible training resource for the classifier. It is important to note that the dataset has inherent limitations like low fidelity, potential artist repetition, and noise, which constrains the model's ability to generalize to real-world audio. However, it remains highly effective for demonstrating the CNN's ability to extract hierarchical features and distinguish timbral textures within a specific distribution.
 
@@ -26,6 +26,7 @@ The dataset consists of 10 genres:
 - Pop
 - Reggae
 - Rock
+  
 All audio files are 30-second WAV files sampled at 22,050 Hz.
 
 ### Data Augmentation via Segmentation
@@ -52,6 +53,7 @@ This approach exposes the model to multiple localized snapshots of each track, f
 - [Training](#training)
 - [Inference](#inference)
 - [Web Application](#web-application)
+- [Future Improvements](#future-improvements)
 
 ---
 
@@ -82,7 +84,7 @@ The model expects 30-second inputs to match its training distribution. When a us
 
 - **Processing**: The resulting 30s clip is split into segments, and predictions are averaged across segments to determine the final genre.
 
-**Note:** We analyze the first 30 seconds as most tracks establish their genre characteristics (instrumentation, tempo, rhythm) in the intro.
+**Note:** Most tracks establish their genre characteristics (instrumentation, tempo, rhythm) in the intro.
 
 ---
 ## Results 
@@ -105,6 +107,7 @@ The model expects 30-second inputs to match its training distribution. When a us
 <p align="center">
   <img src="outputs/mfcc_cnn/plots/training_curves.png" width="800">
 </p>
+
 ---
 
 ## Setup
@@ -161,7 +164,6 @@ pip install kaggle
 #RUN THE DOWNLOAD SCRIPT 
 python download_dataset.py
 ```
-This will:
 - This script downloads the 1.2 GB dataset, extracts it, and verifies the directory structure.
 ---
 ## Feature Extraction
@@ -171,7 +173,7 @@ python src/data_processing/feature_extractor.py
 ```
 This will:
 - Load each 30-second audio file
-- Split into 10 F of 3 seconds each
+- Split into 10 segments of 3 seconds each
 - Extract 13 MFCC coefficients per segment
 - Saves to `mfcc_data.npz`
 ---
@@ -189,7 +191,7 @@ Training configuration:
 
 Output:
 - Saved model: `mfcc_cnn_trained.pth`
-- Plots: `plots`
+- Plots: `plots/`
 
 **Expected accuracy:** ~77% on test set
 
@@ -219,13 +221,14 @@ print(f"Confidence: {result['confidence']*100:.2f}%")
   <img src="outputs/interface.png" width="800">
 </p>
 Start the Server
+
 ```bash
 uvicorn src.app.main:app --reload
 ```
 Access: Open http://localhost:8000 in your browser
 
 Features:
-- Drag & drop or click to select interface
+- Drag & drop or click to select an audio file
 - Supported formats: .wav (recommended), .mp3, .flac, .ogg, .m4a
 - Real-time prediction
 ---
