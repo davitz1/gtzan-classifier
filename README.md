@@ -114,7 +114,7 @@ The model expects 30-second inputs to match its training distribution. When a us
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/gtzan-classifier.git
+git clone https://github.com/davitz1/gtzan-classifier.git
 cd gtzan-classifier
 ```
 ### 2. Create Virtual Environment (Recommended)
